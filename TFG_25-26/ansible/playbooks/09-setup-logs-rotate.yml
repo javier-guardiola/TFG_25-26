@@ -1,0 +1,43 @@
+---
+- name: "09. Configuracion de Rotacion de Logs"
+  hosts: lxc_containers
+  become: yes
+  tasks:
+    - name: "Instalar logrotate"
+      ansible.builtin.apt:
+        name: logrotate
+        state: present
+
+    - name: "Configurar rotacion para la App Flask"
+      ansible.builtin.copy:
+        dest: /etc/logrotate.d/tfg-app
+        content: |
+          /var/log/tfg-app.log {
+              daily
+              missingok
+              rotate 7
+              compress
+              delaycompress
+              notifempty
+              copytruncate
+          }
+
+    - name: "Asegurar que Nginx rota sus logs correctamente"
+      ansible.builtin.copy:
+        dest: /etc/logrotate.d/nginx
+        content: |
+          /var/log/nginx/*.log {
+              daily
+              missingok
+              rotate 14
+              compress
+              delaycompress
+              notifempty
+              create 0640 www-data adm
+              sharedscripts
+              postrotate
+                  if [ -f /var/run/nginx.pid ]; then
+                      kill -USR1 `cat /var/run/nginx.pid`
+                  fi
+              endscript
+          }

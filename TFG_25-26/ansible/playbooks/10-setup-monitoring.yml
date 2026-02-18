@@ -1,0 +1,24 @@
+---
+- name: "10. Instalacion de Monitorizacion (Netdata)"
+  hosts: lxc_containers
+  become: yes
+
+  tasks:
+    - name: "Descargar e instalar Netdata mediante script oficial"
+      ansible.builtin.shell: |
+        wget -O /tmp/netdata-kickstart.sh https://get.netdata.cloud/kickstart.sh
+        sh /tmp/netdata-kickstart.sh --non-interactive
+      args:
+        creates: /usr/sbin/netdata
+
+    - name: "Asegurar que el servicio Netdata este activo"
+      ansible.builtin.systemd:
+        name: netdata
+        state: started
+        enabled: yes
+
+    - name: "Abrir puerto de Netdata en el Firewall (19999)"
+      community.general.ufw:
+        rule: allow
+        port: '19999'
+        proto: tcp
