@@ -1,0 +1,48 @@
+---
+- name: "11. Configuracion de Copias de Seguridad"
+  hosts: db-tfg
+  become: yes
+
+  tasks:
+    - name: "Crear directorio para los backups"
+      ansible.builtin.file:
+        path: /var/backups/mysql
+        state: directory
+        mode: '0700'
+        owner: root
+        group: root
+
+    - name: "Crear script de backup"
+      ansible.builtin.copy:
+        dest: /usr/local/bin/db_backup.sh
+        mode: '0700'
+        content: |
+          #!/bin/bash
+          DATE=$(date +%Y-%m-%d_%H%M)
+          BACKUP_DIR="/var/backups/mysql"
+          DB_NAME="tfg_database"
+          
+          # Realizar el dump y comprimirlo
+          mysqldump --defaults-extra-file=/etc/mysql/debian.cnf $DB_NAME | gzip > $BACKUP_DIR/db_backup_$DATE.sql.gz
+          
+          # Mantener solo los ultimos 30 dias de copias
+          find $BACKUP_DIR -type f -mtime +30 -name "*.sql.gz" -delete
+
+    - name: "Programar tarea Cron (diaria a las 00:00)"
+      ansible.builtin.cron:
+        name: "Backup diario de base de datos TFG"
+        job: "/usr/local/bin/db_backup.sh"
+        hour: "0"
+        minute: "0"
+
+    - name: "Ejecutar un backup inicial de prueba"
+      ansible.builtin.shell: "/usr/local/bin/db_backup.sh"
+      changed_when: true
+
+    - name: "Verificar que el backup se ha creado"
+      ansible.builtin.shell: "ls -lh /var/backups/mysql"
+      register: backup_list
+
+    - name: "Mostrar archivos de backup actuales"
+      ansible.builtin.debug:
+        var: backup_list.stdout_lines
