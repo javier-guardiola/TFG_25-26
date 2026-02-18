@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Panel TFG</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f4f7f6; color: #333; display: flex; flex-direction: column; align-items: center; padding-top: 50px; }
+        .card { background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); width: 80%; max-width: 600px; }
+        .status-on { color: #27ae60; font-weight: bold; }
+        .status-off { color: #e74c3c; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>Infraestructura TFG 25-26</h1>
+        <hr>
+        <p>Estado de la Base de Datos: 
+            <span class="{{ 'status-on' if 'Conectado' in db_status else 'status-off' }}">
+                {{ db_status }}
+            </span>
+        </p>
+        {% if db_data %}
+        <p>Versión del motor: <code>{{ db_data.version }}</code></p>
+        {% endif %}
+    </div>
+</body>
+</html>
