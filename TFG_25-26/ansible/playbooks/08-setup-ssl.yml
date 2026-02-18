@@ -1,0 +1,68 @@
+---
+- name: "08. Configurar SSL/HTTPS en el Proxy"
+  hosts: proxy-tfg
+  become: yes
+
+  tasks:
+    - name: "Instalar OpenSSL"
+      ansible.builtin.apt:
+        name: openssl
+        state: present
+
+    - name: "Crear directorio para certificados"
+      ansible.builtin.file:
+        path: /etc/nginx/ssl
+        state: directory
+        mode: '0755'
+
+    - name: "Eliminar certificados antiguos para forzar actualizacion"
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /etc/nginx/ssl/tfg.key
+        - /etc/nginx/ssl/tfg.crt
+
+    - name: "Generar certificado SSL auto-firmado personalizado"
+      ansible.builtin.shell: |
+        openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+        -keyout /etc/nginx/ssl/tfg.key \
+        -out /etc/nginx/ssl/tfg.crt \
+        -subj "/C=ES/ST=Madrid/L=Madrid/O=TFG/OU=Javier Guardiola/CN=192.168.1.60"
+
+    - name: "Actualizar configuracion de Nginx para HTTPS"
+      ansible.builtin.copy:
+        dest: /etc/nginx/sites-available/default
+        content: |
+          server {
+              listen 80;
+              server_name _;
+              return 301 https://$host$request_uri;
+          }
+
+          server {
+              listen 443 ssl;
+              server_name _;
+
+              ssl_certificate /etc/nginx/ssl/tfg.crt;
+              ssl_certificate_key /etc/nginx/ssl/tfg.key;
+
+              location / {
+                  proxy_pass http://192.168.1.61:8000;
+                  proxy_set_header Host $host;
+                  proxy_set_header X-Real-IP $remote_addr;
+                  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                  proxy_set_header X-Forwarded-Proto $scheme;
+              }
+          }
+
+    - name: "Asegurar puerto 443 en el Firewall"
+      community.general.ufw:
+        rule: allow
+        port: '443'
+        proto: tcp
+
+    - name: "Reiniciar Nginx"
+      ansible.builtin.service:
+        name: nginx
+        state: restarted
