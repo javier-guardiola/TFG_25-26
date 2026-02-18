@@ -1,5 +1,6 @@
 ansible/hosts.ini
 ansible/vars.yml
+ansible/group_vars/all.yml
 *.key
 *.pub
 __pycache__/
