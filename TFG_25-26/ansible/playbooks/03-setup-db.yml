@@ -1,5 +1,5 @@
 ---
-- name: "03. Configuración de MariaDB y Estructura de Datos"
+- name: "03. Configuración de MariaDB"
   hosts: db-tfg
   become: yes
   tasks:
@@ -24,23 +24,11 @@
         line: 'bind-address = 0.0.0.0'
       notify: Reiniciar MariaDB
 
-    - name: "Copiar script de inicialización SQL desde el repositorio"
-      ansible.builtin.copy:
-        src: ../files/init_db.sql
-        dest: /tmp/init_db.sql
-        mode: '0644'
-
-    - name: "Ejecutar script SQL para crear base de datos e inventario"
-      ansible.builtin.shell:
-        cmd: "mariadb -u root < /tmp/init_db.sql"
-      register: sql_result
-      changed_when: sql_result.rc == 0
-
     - name: "Crear usuario para la WebApp con acceso remoto"
       community.mysql.mysql_user:
         name: "{{ db_user }}"
         password: "{{ db_pass }}"
-        priv: "{{ db_name }}.*:ALL"
+        priv: "*.*:ALL"
         host: "%"
         state: present
         login_unix_socket: /var/run/mysqld/mysqld.sock
