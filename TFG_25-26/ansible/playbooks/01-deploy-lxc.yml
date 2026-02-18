@@ -16,9 +16,20 @@
         cmd: "ssh -o StrictHostKeyChecking=no root@{{ pve_api_host }} \"pveam available | grep debian-12-standard | sort -V | tail -n 1 | awk '{print \\$2}'\""
       register: latest_template_query
 
-    - name: "Fijar nombre de la plantilla detectada"
-      ansible.builtin.set_fact:
-        dynamic_template: "{{ latest_template_query.stdout }}"
+    - name: "Eliminar contenedores existentes si ocupan los IDs del TFG"
+      community.general.proxmox:
+        api_host: "{{ pve_api_host }}"
+        api_user: "{{ pve_api_user }}"
+        api_token_id: "{{ pve_api_token_id }}"
+        api_token_secret: "{{ pve_api_token_secret }}"
+        node: "{{ pve_node }}"
+        vmid: "{{ item.id }}"
+        state: absent
+        force: yes
+      loop:
+        - { id: 101 }
+        - { id: 102 }
+        - { id: 103 }
 
     - name: "Garantizar que la plantilla detectada existe"
       community.general.proxmox_template:
@@ -29,22 +40,20 @@
         node: "{{ pve_node }}"
         storage: "local"
         content_type: "vztmpl"
-        template: "{{ dynamic_template }}"
+        template: "{{ latest_template_query.stdout }}"
         state: present
-        timeout: 500
 
-    - name: "Crear contenedores LXC con la plantilla detectada"
+    - name: "Crear contenedores LXC"
       community.general.proxmox:
         api_host: "{{ pve_api_host }}"
         api_user: "{{ pve_api_user }}"
         api_token_id: "{{ pve_api_token_id }}"
         api_token_secret: "{{ pve_api_token_secret }}"
-        validate_certs: no
         node: "{{ pve_node }}"
         vmid: "{{ item.id }}"
         hostname: "{{ item.name }}"
         password: "{{ container_password }}"
-        ostemplate: "local:vztmpl/{{ dynamic_template }}"
+        ostemplate: "local:vztmpl/{{ latest_template_query.stdout }}"
         storage: "{{ pve_storage }}"
         netif: '{"net0":"name=eth0,gw=192.168.1.1,ip={{ item.ip }}/24,bridge=vmbr0"}'
         unprivileged: yes
@@ -62,6 +71,30 @@
         api_token_secret: "{{ pve_api_token_secret }}"
         vmid: "{{ item.id }}"
         state: started
+      loop:
+        - { id: 101 }
+        - { id: 102 }
+        - { id: 103 }
+
+    - name: "Esperar a que el sistema operativo inicie"
+      ansible.builtin.pause:
+        seconds: 15
+
+    - name: "Obtener clave pública local"
+      ansible.builtin.set_fact:
+        pub_key: "{{ lookup('file', '~/.ssh/id_rsa.pub') }}"
+
+    - name: "Configurar SSH y dependencias base (Post-Despliegue)"
+      ansible.builtin.shell: |
+        ssh -o StrictHostKeyChecking=no root@{{ pve_api_host }} "
+        pct exec {{ item.id }} -- apt update && \
+        pct exec {{ item.id }} -- apt install -y openssh-server net-tools && \
+        pct exec {{ item.id }} -- sed -i 's/#PermitRootLogin.*/PermitRootLogin yes/' /etc/ssh/sshd_config && \
+        pct exec {{ item.id }} -- mkdir -p /root/.ssh && \
+        pct exec {{ item.id }} -- bash -c \"echo '{{ pub_key }}' > /root/.ssh/authorized_keys\" && \
+        pct exec {{ item.id }} -- chmod 600 /root/.ssh/authorized_keys && \
+        pct exec {{ item.id }} -- systemctl enable ssh && \
+        pct exec {{ item.id }} -- systemctl restart ssh"
       loop:
         - { id: 101 }
         - { id: 102 }

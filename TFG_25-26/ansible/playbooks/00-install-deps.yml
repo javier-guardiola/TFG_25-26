@@ -3,13 +3,39 @@
   hosts: localhost
   connection: local
   tasks:
-    - name: "Instalar colecciones desde requirements.yml"
-      ansible.builtin.command:
-        cmd: "ansible-galaxy collection install -r ../collections/requirements.yml"
-      register: result
-      changed_when: "'is already installed' not in result.stdout"
+    - name: "Instalar colecciones de Ansible"
+      community.general.ansible_galaxy_install:
+        type: collection
+        requirements_file: "../collections/requirements.yml"
 
-    - name: "Asegurar librerías de Python para Proxmox"
+    - name: "Instalar librerías de Python necesarias"
       ansible.builtin.pip:
         name: [proxmoxer, requests, jmespath]
-        extra_args: "--break-system-packages"
+        extra_args: "--user --break-system-packages"
+
+    - name: "Asegurar existencia de claves SSH locales"
+      ansible.builtin.openssh_keypair:
+        path: "~/.ssh/id_rsa"
+        type: rsa
+        size: 4096
+        state: present
+
+    - name: "Normalizar formato de archivos (dos2unix alternativo)"
+      ansible.builtin.replace:
+        path: "{{ item }}"
+        regexp: '\r$'
+        replace: ''
+      with_fileglob:
+        - "../**/*.yml"
+        - "../**/*.ini"
+        - "../ansible.cfg"
+
+    - name: "Autorizar SSH con Proxmox (Sustituye a ssh-copy-id)"
+      ansible.builtin.shell: |
+        sshpass -p '{{ pve_root_password }}' ssh-copy-id -o StrictHostKeyChecking=no root@{{ pve_api_host }}
+      vars:
+        # Estas variables las cogerá de tu vars.yml
+        pve_root_password: "{{ container_password }}" 
+      register: ssh_result
+      changed_when: "'Number of key(s) added' in ssh_result.stdout"
+      failed_when: false

@@ -1,0 +1,55 @@
+---
+- name: "02. Configuración de Servicios TFG"
+  hosts: lxc_containers
+  become: yes
+  gather_facts: yes
+
+  tasks:
+    - name: "Actualizar caché de APT"
+      ansible.builtin.apt:
+        update_cache: yes
+        cache_valid_time: 3600
+
+    - name: "Instalar paquetes comunes de administración"
+      ansible.builtin.apt:
+        name:
+          - htop
+          - curl
+          - git
+          - ufw
+        state: present
+
+- name: "Configurar Servidor de Base de Datos"
+  hosts: db-tfg
+  become: yes
+  tasks:
+    - name: "Instalar MariaDB Server"
+      ansible.builtin.apt:
+        name: mariadb-server
+        state: present
+
+    - name: "Asegurar que MariaDB esté iniciado"
+      ansible.builtin.service:
+        name: mariadb
+        state: started
+        enabled: yes
+
+- name: "Configurar Servidor Web (Aplicación)"
+  hosts: webapp-tfg
+  become: yes
+  tasks:
+    - name: "Instalar entorno de Python"
+      ansible.builtin.apt:
+        name:
+          - python3-pip
+          - python3-venv
+        state: present
+
+- name: "Configurar Proxy Inverso"
+  hosts: proxy-tfg
+  become: yes
+  tasks:
+    - name: "Instalar Nginx"
+      ansible.builtin.apt:
+        name: nginx
+        state: present
