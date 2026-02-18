@@ -1,0 +1,66 @@
+---
+- name: "05. Desplegar Aplicación y Configurar Servicio"
+  hosts: webapp-tfg
+  become: yes
+  vars:
+    db_host: "192.168.1.62"
+    db_user: "tfg_user"
+    db_pass: "tfg_password_2026"
+    db_name: "tfg_database"
+
+  tasks:
+    - name: "Instalar dependencias de Python"
+      ansible.builtin.apt:
+        name:
+          - python3-flask
+          - python3-pymysql
+        state: present
+
+    - name: "Crear aplicación de prueba"
+      ansible.builtin.copy:
+        dest: "/root/app.py"
+        content: |
+          from flask import Flask
+          import pymysql
+          app = Flask(__name__)
+
+          @app.route('/')
+          def hello():
+              try:
+                  conn = pymysql.connect(
+                      host='{{ db_host }}',
+                      user='{{ db_user }}',
+                      password='{{ db_pass }}',
+                      db='{{ db_name }}',
+                      cursorclass=pymysql.cursors.DictCursor
+                  )
+                  return "<h1>TFG 25-26</h1><p>Conexion a DB: <b>EXITOSA</b></p>"
+              except Exception as e:
+                  return f"<h1>TFG 25-26</h1><p>Conexion a DB: <b>FALLIDA</b></p><p>Error: {e}</p>"
+
+          if __name__ == '__main__':
+              app.run(host='0.0.0.0', port=8000)
+
+    - name: "Configurar el servicio Systemd"
+      ansible.builtin.copy:
+        dest: /etc/systemd/system/tfg-app.service
+        content: |
+          [Unit]
+          Description=Servidor Flask TFG
+          After=network.target
+
+          [Service]
+          User=root
+          WorkingDirectory=/root
+          ExecStart=/usr/bin/python3 /root/app.py
+          Restart=always
+
+          [Install]
+          WantedBy=multi-user.target
+
+    - name: "Activar e iniciar el servicio"
+      ansible.builtin.systemd:
+        name: tfg-app
+        state: restarted
+        enabled: yes
+        daemon_reload: yes

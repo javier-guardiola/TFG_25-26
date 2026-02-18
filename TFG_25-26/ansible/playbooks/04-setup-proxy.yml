@@ -1,0 +1,33 @@
+---
+- name: "04. Configurar Proxy Inverso Nginx (Limpio)"
+  hosts: proxy-tfg
+  become: yes
+  vars:
+    webapp_ip: "192.168.1.61"
+
+  tasks:
+    - name: "Eliminar configuracion por defecto antigua"
+      ansible.builtin.file:
+        path: /etc/nginx/sites-available/default
+        state: absent
+
+    - name: "Crear nueva configuracion de Proxy"
+      ansible.builtin.copy:
+        dest: /etc/nginx/sites-available/default
+        content: |
+          server {
+              listen 80;
+              server_name _;
+
+              location / {
+                  proxy_pass http://{{ webapp_ip }}:8000;
+                  proxy_set_header Host $host;
+                  proxy_set_header X-Real-IP $remote_addr;
+                  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+              }
+          }
+
+    - name: "Reiniciar Nginx para aplicar cambios"
+      ansible.builtin.service:
+        name: nginx
+        state: restarted
