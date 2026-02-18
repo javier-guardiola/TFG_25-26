@@ -1,0 +1,40 @@
+---
+- name: Despliegue de Infraestructura TFG en Proxmox
+  hosts: proxmox
+  become: yes
+  vars_files:
+    - vars.yml
+
+  tasks:
+    - name: Crear Contenedor LXC para Proxy (Nginx)
+      community.general.proxmox_lxc:
+        node: "{{ pve_node }}"
+        vmid: 101
+        hostname: proxy-tfg
+        password: "{{ container_password }}"
+        ostemplate: 'local:vztmpl/debian-12-standard_12.0-1_amd64.tar.zst'
+        net0: "name=eth0,bridge=vmbr0,ip=192.168.1.60/24,gw=192.168.1.1"
+        unprivileged: yes
+        state: present
+
+    - name: Crear Contenedor LXC para Web App
+      community.general.proxmox_lxc:
+        node: "{{ pve_node }}"
+        vmid: 102
+        hostname: webapp-tfg
+        password: "{{ container_password }}"
+        ostemplate: 'local:vztmpl/debian-12-standard_12.0-1_amd64.tar.zst'
+        net0: "name=eth0,bridge=vmbr0,ip=192.168.1.61/24,gw=192.168.1.1"
+        unprivileged: yes
+        state: present
+
+    - name: Crear Contenedor LXC para Base de Datos
+      community.general.proxmox_lxc:
+        node: "{{ pve_node }}"
+        vmid: 103
+        hostname: db-tfg
+        password: "{{ container_password }}"
+        ostemplate: 'local:vztmpl/debian-12-standard_12.0-1_amd64.tar.zst'
+        net0: "name=eth0,bridge=vmbr0,ip=192.168.1.62/24,gw=192.168.1.1"
+        unprivileged: yes
+        state: present
