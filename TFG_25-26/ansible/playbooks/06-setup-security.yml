@@ -1,0 +1,41 @@
+---
+- name: "06. Configuración de Seguridad (UFW)"
+  hosts: lxc_containers
+  become: yes
+  tasks:
+    - name: "Instalar UFW (Uncomplicated Firewall)"
+      ansible.builtin.apt:
+        name: ufw
+        state: present
+
+    - name: "Regla Global: Permitir SSH"
+      community.general.ufw:
+        rule: allow
+        port: '22'
+        proto: tcp
+
+    - name: "Regla Proxy: Permitir tráfico Web (80)"
+      community.general.ufw:
+        rule: allow
+        port: '80'
+        proto: tcp
+      when: inventory_hostname == 'proxy-tfg'
+
+    - name: "Regla WebApp: Solo desde el Proxy (8000)"
+      community.general.ufw:
+        rule: allow
+        port: '8000'
+        from_ip: '192.168.1.60'
+      when: inventory_hostname == 'webapp-tfg'
+
+    - name: "Regla DB: Solo desde la WebApp (3306)"
+      community.general.ufw:
+        rule: allow
+        port: '3306'
+        from_ip: '192.168.1.61'
+      when: inventory_hostname == 'db-tfg'
+
+    - name: "Activar Firewall y establecer política por defecto (Deny)"
+      community.general.ufw:
+        state: enabled
+        policy: deny
