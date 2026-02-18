@@ -1,0 +1,68 @@
+---
+- name: "01. Desplegar Infraestructura TFG en Proxmox"
+  hosts: proxmox
+  connection: local
+  gather_facts: no
+  vars_files:
+    - ../vars.yml
+
+  tasks:
+    - name: "Actualizar repositorios de plantillas en Proxmox"
+      ansible.builtin.command:
+        cmd: "ssh -o StrictHostKeyChecking=no root@{{ pve_api_host }} 'pveam update'"
+
+    - name: "Detectar automáticamente la última plantilla de Debian 12"
+      ansible.builtin.shell:
+        cmd: "ssh -o StrictHostKeyChecking=no root@{{ pve_api_host }} \"pveam available | grep debian-12-standard | sort -V | tail -n 1 | awk '{print \\$2}'\""
+      register: latest_template_query
+
+    - name: "Fijar nombre de la plantilla detectada"
+      ansible.builtin.set_fact:
+        dynamic_template: "{{ latest_template_query.stdout }}"
+
+    - name: "Garantizar que la plantilla detectada existe"
+      community.general.proxmox_template:
+        api_host: "{{ pve_api_host }}"
+        api_user: "{{ pve_api_user }}"
+        api_token_id: "{{ pve_api_token_id }}"
+        api_token_secret: "{{ pve_api_token_secret }}"
+        node: "{{ pve_node }}"
+        storage: "local"
+        content_type: "vztmpl"
+        template: "{{ dynamic_template }}"
+        state: present
+        timeout: 500
+
+    - name: "Crear contenedores LXC con la plantilla detectada"
+      community.general.proxmox:
+        api_host: "{{ pve_api_host }}"
+        api_user: "{{ pve_api_user }}"
+        api_token_id: "{{ pve_api_token_id }}"
+        api_token_secret: "{{ pve_api_token_secret }}"
+        validate_certs: no
+        node: "{{ pve_node }}"
+        vmid: "{{ item.id }}"
+        hostname: "{{ item.name }}"
+        password: "{{ container_password }}"
+        ostemplate: "local:vztmpl/{{ dynamic_template }}"
+        storage: "{{ pve_storage }}"
+        netif: '{"net0":"name=eth0,gw=192.168.1.1,ip={{ item.ip }}/24,bridge=vmbr0"}'
+        unprivileged: yes
+        state: present
+      loop:
+        - { id: 101, name: 'proxy-tfg', ip: '192.168.1.60' }
+        - { id: 102, name: 'webapp-tfg', ip: '192.168.1.61' }
+        - { id: 103, name: 'db-tfg', ip: '192.168.1.62' }
+
+    - name: "Iniciar los contenedores"
+      community.general.proxmox:
+        api_host: "{{ pve_api_host }}"
+        api_user: "{{ pve_api_user }}"
+        api_token_id: "{{ pve_api_token_id }}"
+        api_token_secret: "{{ pve_api_token_secret }}"
+        vmid: "{{ item.id }}"
+        state: started
+      loop:
+        - { id: 101 }
+        - { id: 102 }
+        - { id: 103 }

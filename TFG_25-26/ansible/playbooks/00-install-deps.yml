@@ -1,0 +1,15 @@
+---
+- name: "00. Preparar entorno local de Ansible"
+  hosts: localhost
+  connection: local
+  tasks:
+    - name: "Instalar colecciones desde requirements.yml"
+      ansible.builtin.command:
+        cmd: "ansible-galaxy collection install -r ../collections/requirements.yml"
+      register: result
+      changed_when: "'is already installed' not in result.stdout"
+
+    - name: "Asegurar librerías de Python para Proxmox"
+      ansible.builtin.pip:
+        name: [proxmoxer, requests, jmespath]
+        extra_args: "--break-system-packages"
