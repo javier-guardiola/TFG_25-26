@@ -1,12 +1,7 @@
 ---
-- name: "05. Desplegar Aplicación y Configurar Servicio"
+- name: "05. Desplegar Aplicación de Prueba y Configurar Servicio"
   hosts: webapp-tfg
   become: yes
-  vars:
-    db_host: "192.168.1.62"
-    db_user: "tfg_user"
-    db_pass: "tfg_password_2026"
-    db_name: "tfg_database"
 
   tasks:
     - name: "Instalar dependencias de Python"
@@ -28,7 +23,7 @@
           def hello():
               try:
                   conn = pymysql.connect(
-                      host='{{ db_host }}',
+                      host='{{ db_ip }}',
                       user='{{ db_user }}',
                       password='{{ db_pass }}',
                       db='{{ db_name }}',
@@ -46,7 +41,7 @@
         dest: /etc/systemd/system/tfg-app.service
         content: |
           [Unit]
-          Description=Servidor Flask TFG
+          Description=Servidor Flask TFG Test
           After=network.target
 
           [Service]
