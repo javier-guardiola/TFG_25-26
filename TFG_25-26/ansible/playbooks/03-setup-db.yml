@@ -3,7 +3,7 @@
   hosts: db-tfg
   become: yes
   tasks:
-    - name: "Instalar MariaDB Server y dependencias de Python"
+    - name: "Instalar MariaDB Server y dependencias"
       ansible.builtin.apt:
         name: 
           - mariadb-server
@@ -17,18 +17,24 @@
         state: started
         enabled: yes
 
-    - name: "Configurar MariaDB para escuchar en todas las interfaces"
+    - name: "Crear la base de datos necesaria"
+      community.mysql.mysql_db:
+        name: tfg_database
+        state: present
+        login_unix_socket: /var/run/mysqld/mysqld.sock
+
+    - name: "Configurar acceso remoto"
       ansible.builtin.lineinfile:
         path: /etc/mysql/mariadb.conf.d/50-server.cnf
         regexp: '^bind-address'
         line: 'bind-address = 0.0.0.0'
       notify: Reiniciar MariaDB
 
-    - name: "Crear usuario para la WebApp con acceso remoto"
+    - name: "Crear usuario para la WebApp"
       community.mysql.mysql_user:
-        name: "{{ db_user }}"
-        password: "{{ db_pass }}"
-        priv: "*.*:ALL"
+        name: "tfg_user"
+        password: "tfg_password_2026"
+        priv: "tfg_database.*:ALL"
         host: "%"
         state: present
         login_unix_socket: /var/run/mysqld/mysqld.sock
