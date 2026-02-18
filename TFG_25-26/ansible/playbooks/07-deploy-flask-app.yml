@@ -1,0 +1,54 @@
+---
+- name: "07. Despliegue de la Aplicacion Real"
+  hosts: webapp-tfg
+  become: yes
+
+  tasks:
+    - name: "Instalar dependencias del sistema para Python"
+      ansible.builtin.apt:
+        name: 
+          - python3-venv
+          - python3-pip
+        state: present
+
+    - name: "Crear directorio de la aplicacion en /opt"
+      ansible.builtin.file:
+        path: /opt/tfg_app
+        state: directory
+        mode: '0755'
+
+    - name: "Sincronizar codigo fuente desde local"
+      ansible.builtin.copy:
+        src: ../../flask_app/
+        dest: /opt/tfg_app/
+        mode: '0644'
+
+    - name: "Configurar entorno virtual e instalar dependencias"
+      ansible.builtin.pip:
+        requirements: /opt/tfg_app/requirements.txt
+        virtualenv: /opt/tfg_app/venv
+        virtualenv_command: python3 -m venv
+
+    - name: "Configurar servicio Systemd para la aplicacion real"
+      ansible.builtin.copy:
+        dest: /etc/systemd/system/tfg-app.service
+        content: |
+          [Unit]
+          Description=Servidor Flask TFG
+          After=network.target
+
+          [Service]
+          User=root
+          WorkingDirectory=/opt/tfg_app
+          ExecStart=/opt/tfg_app/venv/bin/python3 /opt/tfg_app/app.py
+          Restart=always
+
+          [Install]
+          WantedBy=multi-user.target
+
+    - name: "Reiniciar aplicacion para aplicar cambios"
+      ansible.builtin.systemd:
+        name: tfg-app
+        state: restarted
+        enabled: yes
+        daemon_reload: yes
