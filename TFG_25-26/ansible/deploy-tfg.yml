@@ -1,40 +1,51 @@
 ---
 - name: Despliegue de Infraestructura TFG en Proxmox
   hosts: proxmox
-  become: yes
+  gather_facts: no
   vars_files:
     - vars.yml
 
   tasks:
-    - name: Crear Contenedor LXC para Proxy (Nginx)
+    - name: Crear contenedores LXC del laboratorio TFG
       community.general.proxmox_lxc:
+        # Credenciales de API (vienen de vars.yml)
+        api_host: "{{ pve_api_host }}"
+        api_user: "{{ pve_api_user }}"
+        api_password: "{{ pve_api_password }}"
+        validate_certs: no
+        
+        # Configuracion del Host
         node: "{{ pve_node }}"
-        vmid: 101
-        hostname: proxy-tfg
+        storage: "{{ pve_storage }}"
+        
+        # Datos del Contenedor (vienen del loop inferior)
+        vmid: "{{ item.id }}"
+        hostname: "{{ item.name }}"
         password: "{{ container_password }}"
-        ostemplate: 'local:vztmpl/debian-12-standard_12.0-1_amd64.tar.zst'
-        net0: "name=eth0,bridge=vmbr0,ip=192.168.1.60/24,gw=192.168.1.1"
+        ostemplate: "{{ pve_template }}"
+        
+        # Configuracion de Red
+        # Se asume bridge vmbr0 y gateway 192.168.1.1
+        net0: "name=eth0,bridge=vmbr0,ip={{ item.ip }}/24,gw=192.168.1.1"
+        
+        # Ajustes de recursos y estado
         unprivileged: yes
         state: present
+      loop:
+        - { id: 101, name: 'proxy-tfg', ip: '192.168.1.60' }
+        - { id: 102, name: 'webapp-tfg', ip: '192.168.1.61' }
+        - { id: 103, name: 'db-tfg', ip: '192.168.1.62' }
 
-    - name: Crear Contenedor LXC para Web App
-      community.general.proxmox_lxc:
-        node: "{{ pve_node }}"
-        vmid: 102
-        hostname: webapp-tfg
-        password: "{{ container_password }}"
-        ostemplate: 'local:vztmpl/debian-12-standard_12.0-1_amd64.tar.zst'
-        net0: "name=eth0,bridge=vmbr0,ip=192.168.1.61/24,gw=192.168.1.1"
-        unprivileged: yes
-        state: present
+    - name: Verificar estado de los contenedores creados
+      shell: "pct status {{ item.id }}"
+      loop:
+        - { id: 101 }
+        - { id: 102 }
+        - { id: 103 }
+      register: lxc_status
+      changed_when: false
 
-    - name: Crear Contenedor LXC para Base de Datos
-      community.general.proxmox_lxc:
-        node: "{{ pve_node }}"
-        vmid: 103
-        hostname: db-tfg
-        password: "{{ container_password }}"
-        ostemplate: 'local:vztmpl/debian-12-standard_12.0-1_amd64.tar.zst'
-        net0: "name=eth0,bridge=vmbr0,ip=192.168.1.62/24,gw=192.168.1.1"
-        unprivileged: yes
-        state: present
+    - name: Mostrar resumen de despliegue
+      debug:
+        msg: "El contenedor {{ item.item.id }} ({{ item.item.id }}) esta en estado: {{ item.stdout }}"
+      loop: "{{ lxc_status.results }}"
