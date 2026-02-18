@@ -1,35 +1,41 @@
 ---
-- name: "07. Despliegue de la Aplicacion Real"
+- name: "07. Despliegue de la Aplicacion"
   hosts: webapp-tfg
   become: yes
-
   tasks:
-    - name: "Instalar dependencias del sistema para Python"
-      ansible.builtin.apt:
-        name: 
-          - python3-venv
-          - python3-pip
-        state: present
-
-    - name: "Crear directorio de la aplicacion en /opt"
+    - name: "Crear directorios necesarios"
       ansible.builtin.file:
-        path: /opt/tfg_app
+        path: /opt/tfg_app/templates
         state: directory
         mode: '0755'
 
-    - name: "Sincronizar codigo fuente desde local"
+    - name: "Copiar archivos de la app al contenedor"
       ansible.builtin.copy:
-        src: ../../flask_app/
-        dest: /opt/tfg_app/
-        mode: '0644'
+        src: "../../flask_app/{{ item }}"
+        dest: "/opt/tfg_app/{{ item }}"
+      loop:
+        - app.py
+        - templates/index.html
+        - requirements.txt
 
-    - name: "Configurar entorno virtual e instalar dependencias"
+    - name: "Inyectar variables reales en app.py"
+      ansible.builtin.replace:
+        path: /opt/tfg_app/app.py
+        regexp: "{{ item.buscar }}"
+        replace: "{{ item.poner }}"
+      loop:
+        - { buscar: "DB_IP_PLACEHOLDER", poner: "{{ db_ip }}" }
+        - { buscar: "DB_USER_PLACEHOLDER", poner: "{{ db_user }}" }
+        - { buscar: "DB_PASS_PLACEHOLDER", poner: "{{ db_pass }}" }
+        - { buscar: "DB_NAME_PLACEHOLDER", poner: "{{ db_name }}" }
+
+    - name: "Configurar entorno virtual y dependencias"
       ansible.builtin.pip:
         requirements: /opt/tfg_app/requirements.txt
         virtualenv: /opt/tfg_app/venv
         virtualenv_command: python3 -m venv
 
-    - name: "Configurar servicio Systemd para la aplicacion real"
+    - name: "Crear servicio del sistema"
       ansible.builtin.copy:
         dest: /etc/systemd/system/tfg-app.service
         content: |
@@ -46,7 +52,7 @@
           [Install]
           WantedBy=multi-user.target
 
-    - name: "Reiniciar aplicacion para aplicar cambios"
+    - name: "Iniciar y habilitar la aplicacion"
       ansible.builtin.systemd:
         name: tfg-app
         state: restarted

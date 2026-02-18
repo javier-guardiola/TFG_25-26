@@ -2,11 +2,14 @@
 - name: "00. Preparar entorno local de Ansible"
   hosts: localhost
   connection: local
+  gather_facts: no
+
   tasks:
     - name: "Instalar colecciones de Ansible"
       community.general.ansible_galaxy_install:
         type: collection
         requirements_file: "../collections/requirements.yml"
+      failed_when: false
 
     - name: "Instalar librerías de Python necesarias"
       ansible.builtin.pip:
@@ -20,6 +23,24 @@
         size: 4096
         state: present
 
+    - name: "Limpiar huella SSH antigua de Proxmox (Local)"
+      ansible.builtin.shell: "ssh-keygen -f ~/.ssh/known_hosts -R {{ pve_api_host }}"
+      failed_when: false
+      changed_when: false
+
+    - name: "Verificar si ya tenemos acceso SSH sin contraseña"
+      ansible.builtin.command: "ssh -o BatchMode=yes -o ConnectTimeout=5 -o StrictHostKeyChecking=no root@{{ pve_api_host }} 'exit'"
+      register: ssh_check
+      failed_when: false
+      changed_when: false
+
+    - name: "Autorizar SSH con Proxmox (Sustituye a ssh-copy-id)"
+      ansible.builtin.shell:
+        cmd: sshpass -p "{{ container_password }}" ssh-copy-id -f -o StrictHostKeyChecking=no root@{{ pve_api_host }}
+      when: ssh_check.rc != 0
+      register: ssh_result
+      changed_when: "'Number of key(s) added' in ssh_result.stdout"
+
     - name: "Normalizar formato de archivos (dos2unix alternativo)"
       ansible.builtin.replace:
         path: "{{ item }}"
@@ -29,13 +50,3 @@
         - "../**/*.yml"
         - "../**/*.ini"
         - "../ansible.cfg"
-
-    - name: "Autorizar SSH con Proxmox (Sustituye a ssh-copy-id)"
-      ansible.builtin.shell: |
-        sshpass -p '{{ pve_root_password }}' ssh-copy-id -o StrictHostKeyChecking=no root@{{ pve_api_host }}
-      vars:
-        # Estas variables las cogerá de tu vars.yml
-        pve_root_password: "{{ container_password }}" 
-      register: ssh_result
-      changed_when: "'Number of key(s) added' in ssh_result.stdout"
-      failed_when: false

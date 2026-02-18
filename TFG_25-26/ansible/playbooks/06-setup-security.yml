@@ -25,14 +25,14 @@
       community.general.ufw:
         rule: allow
         port: '8000'
-        from_ip: '192.168.1.60'
+        from_ip: "{{ proxy_ip }}"
       when: inventory_hostname == 'webapp-tfg'
 
     - name: "Regla DB: Solo desde la WebApp (3306)"
       community.general.ufw:
         rule: allow
         port: '3306'
-        from_ip: '192.168.1.61'
+        from_ip: "{{ webapp_ip }}"
       when: inventory_hostname == 'db-tfg'
 
     - name: "Activar Firewall y establecer política por defecto (Deny)"

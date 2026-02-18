@@ -43,7 +43,7 @@
         template: "{{ latest_template_query.stdout }}"
         state: present
 
-    - name: "Crear contenedores LXC"
+    - name: "Crear contenedores LXC usando variables de red"
       community.general.proxmox:
         api_host: "{{ pve_api_host }}"
         api_user: "{{ pve_api_user }}"
@@ -59,9 +59,9 @@
         unprivileged: yes
         state: present
       loop:
-        - { id: 101, name: 'proxy-tfg', ip: '192.168.1.60' }
-        - { id: 102, name: 'webapp-tfg', ip: '192.168.1.61' }
-        - { id: 103, name: 'db-tfg', ip: '192.168.1.62' }
+        - { id: 101, name: 'proxy-tfg', ip: "{{ proxy_ip }}" }
+        - { id: 102, name: 'webapp-tfg', ip: "{{ webapp_ip }}" }
+        - { id: 103, name: 'db-tfg', ip: "{{ db_ip }}" }
 
     - name: "Iniciar los contenedores"
       community.general.proxmox:
@@ -84,7 +84,7 @@
       ansible.builtin.set_fact:
         pub_key: "{{ lookup('file', '~/.ssh/id_rsa.pub') }}"
 
-    - name: "Configurar SSH y dependencias base (Post-Despliegue)"
+    - name: "Configurar SSH y dependencias base"
       ansible.builtin.shell: |
         ssh -o StrictHostKeyChecking=no root@{{ pve_api_host }} "
         pct exec {{ item.id }} -- apt update && \

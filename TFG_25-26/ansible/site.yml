@@ -1,0 +1,13 @@
+---
+- import_playbook: playbooks/00-install-deps.yml
+- import_playbook: playbooks/01-deploy-lxc.yml
+- import_playbook: playbooks/02-setup-services.yml
+- import_playbook: playbooks/03-setup-db.yml
+- import_playbook: playbooks/04-setup-proxy.yml
+- import_playbook: playbooks/05-test-connectivity.yml
+- import_playbook: playbooks/06-setup-security.yml
+- import_playbook: playbooks/07-deploy-flask-app.yml
+- import_playbook: playbooks/08-setup-ssl.yml
+- import_playbook: playbooks/09-setup-logs-rotate.yml
+- import_playbook: playbooks/10-setup-monitoring.yml
+- import_playbook: playbooks/11-setup-backups.yml

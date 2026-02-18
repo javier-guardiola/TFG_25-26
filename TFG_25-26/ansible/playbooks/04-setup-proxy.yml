@@ -1,9 +1,7 @@
 ---
-- name: "04. Configurar Proxy Inverso Nginx (Limpio)"
+- name: "04. Configurar Proxy Inverso Nginx"
   hosts: proxy-tfg
   become: yes
-  vars:
-    webapp_ip: "192.168.1.61"
 
   tasks:
     - name: "Eliminar configuracion por defecto antigua"

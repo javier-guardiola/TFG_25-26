@@ -1,18 +1,21 @@
 ---
-- name: "03. Configuración Avanzada de Base de Datos"
+- name: "03. Configuración de MariaDB y Estructura de Datos"
   hosts: db-tfg
   become: yes
-  vars:
-    db_name: "tfg_database"
-    db_user: "tfg_user"
-    db_pass: "tfg_password_2026" # Cambia esto si quieres
-    webapp_ip: "192.168.1.61"
-
   tasks:
-    - name: "Instalar dependencias de Python para MySQL"
+    - name: "Instalar MariaDB Server y dependencias de Python"
       ansible.builtin.apt:
-        name: python3-pymysql
+        name: 
+          - mariadb-server
+          - python3-pymysql
         state: present
+        update_cache: yes
+
+    - name: "Asegurar que MariaDB esté en ejecución"
+      ansible.builtin.service:
+        name: mariadb
+        state: started
+        enabled: yes
 
     - name: "Configurar MariaDB para escuchar en todas las interfaces"
       ansible.builtin.lineinfile:
@@ -21,18 +24,24 @@
         line: 'bind-address = 0.0.0.0'
       notify: Reiniciar MariaDB
 
-    - name: "Crear la base de datos del TFG"
-      community.mysql.mysql_db:
-        name: "{{ db_name }}"
-        state: present
-        login_unix_socket: /var/run/mysqld/mysqld.sock
+    - name: "Copiar script de inicialización SQL desde el repositorio"
+      ansible.builtin.copy:
+        src: ../files/init_db.sql
+        dest: /tmp/init_db.sql
+        mode: '0644'
 
-    - name: "Crear usuario de base de datos para la WebApp"
+    - name: "Ejecutar script SQL para crear base de datos e inventario"
+      ansible.builtin.shell:
+        cmd: "mariadb -u root < /tmp/init_db.sql"
+      register: sql_result
+      changed_when: sql_result.rc == 0
+
+    - name: "Crear usuario para la WebApp con acceso remoto"
       community.mysql.mysql_user:
         name: "{{ db_user }}"
         password: "{{ db_pass }}"
         priv: "{{ db_name }}.*:ALL"
-        host: "{{ webapp_ip }}"
+        host: "%"
         state: present
         login_unix_socket: /var/run/mysqld/mysqld.sock
 
