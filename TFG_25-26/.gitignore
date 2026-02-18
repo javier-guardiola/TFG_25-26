@@ -1,2 +1,7 @@
 ansible/hosts.ini
 ansible/vars.yml
+*.key
+*.pub
+__pycache__/
+*.pyc
+*.log
