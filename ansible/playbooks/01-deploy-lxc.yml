@@ -57,6 +57,8 @@
         storage: "{{ pve_storage }}"
         netif: '{"net0":"name=eth0,gw=192.168.1.1,ip={{ item.ip }}/24,bridge=vmbr0"}'
         unprivileged: yes
+        features:
+          - nesting=1
         state: present
       loop:
         - { id: 101, name: 'proxy-tfg', ip: "{{ proxy_ip }}" }
