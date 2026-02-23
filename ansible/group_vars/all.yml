@@ -1,0 +1,24 @@
+# --- Configuración Proxmox (Extraído de tu vars.yml) ---
+pve_api_host: "192.168.1.156"
+pve_api_user: "root@pam"
+pve_api_token_id: "ansible-tfg"
+pve_api_token_secret: "2cc7c7a0-7ed9-4809-9cb7-02dece151ea1"
+pve_node: "pve01"
+pve_storage: "local-lvm"
+pve_template: "local:vztmpl/debian-12-standard_12.0-1_amd64.tar.zst"
+
+# --- Credenciales y Red (Tu all.yml original) ---
+container_password: "jiqcu6nez"
+network_gateway: "192.168.1.1"
+
+proxy_ip: "192.168.1.60"
+webapp_ip: "192.168.1.61"
+db_ip: "192.168.1.62"
+
+# --- Base de Datos ---
+db_name: "tfg_database"
+db_user: "tfg_user"
+db_pass: "tfg_password_2026"
+
+# --- Otros ---
+autor_nombre: "Javier Guardiola"
