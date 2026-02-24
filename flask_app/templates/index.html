@@ -27,20 +27,22 @@
         {% endif %}
         
         {% if activos %}
-        <h2>Inventario de Activos Red</h2>
+        <h2>Inventario Dinámico de Red</h2>
         <table>
             <tr>
                 <th>ID</th>
                 <th>Servidor</th>
                 <th>IP</th>
-                <th>Estado</th>
+                <th>Puerto Auditar</th>
+                <th>Estado Red</th>
             </tr>
             {% for activo in activos %}
             <tr>
                 <td>{{ activo.id }}</td>
                 <td>{{ activo.nombre_servidor }}</td>
                 <td>{{ activo.direccion_ip }}</td>
-                <td class="status-on">{{ activo.estado }}</td>
+                <td>{{ activo.puerto }}</td>
+                <td class="{{ 'status-on' if activo.estado == 'Activo' else 'status-off' }}">{{ activo.estado }}</td>
             </tr>
             {% endfor %}
         </table>

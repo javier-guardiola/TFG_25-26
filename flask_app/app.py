@@ -1,5 +1,6 @@
 from flask import Flask, render_template
 import pymysql
+import socket
 
 app = Flask(__name__)
 
@@ -11,6 +12,13 @@ db_config = {
     'cursorclass': pymysql.cursors.DictCursor
 }
 
+def check_port(ip, port):
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.settimeout(1)
+    result = sock.connect_ex((ip, port))
+    sock.close()
+    return result == 0
+
 @app.route('/')
 def index():
     context = {"db_status": "Desconectado", "db_data": [], "activos": []}
@@ -20,8 +28,15 @@ def index():
         with connection.cursor() as cursor:
             cursor.execute("SELECT VERSION() as version")
             context["db_data"] = cursor.fetchone()
+            
             cursor.execute("SELECT * FROM activos")
-            context["activos"] = cursor.fetchall()
+            activos_db = cursor.fetchall()
+            
+            for activo in activos_db:
+                is_up = check_port(activo['direccion_ip'], activo['puerto'])
+                activo['estado'] = "Activo" if is_up else "Caído"
+                context["activos"].append(activo)
+                
         connection.close()
     except Exception as e:
         context["db_status"] = f"Error: {e}"
