@@ -39,6 +39,15 @@
         state: present
         login_unix_socket: /var/run/mysqld/mysqld.sock
 
+    - name: "Crear tabla activos e insertar datos de prueba"
+      community.mysql.mysql_query:
+        login_unix_socket: /var/run/mysqld/mysqld.sock
+        login_user: root
+        login_db: tfg_database
+        query:
+          - "CREATE TABLE IF NOT EXISTS activos (id INT AUTO_INCREMENT PRIMARY KEY, nombre_servidor VARCHAR(255), direccion_ip VARCHAR(15), estado VARCHAR(50));"
+          - "INSERT IGNORE INTO activos (id, nombre_servidor, direccion_ip, estado) VALUES (1, 'Proxy Nginx', '192.168.1.60', 'Activo'), (2, 'App Flask', '192.168.1.61', 'Activo'), (3, 'DB MariaDB', '192.168.1.62', 'Activo');"
+
   handlers:
     - name: Reiniciar MariaDB
       ansible.builtin.service:
