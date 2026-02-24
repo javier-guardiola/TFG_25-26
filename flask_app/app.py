@@ -1,6 +1,8 @@
 from flask import Flask, render_template
 import pymysql
 import socket
+import time
+from datetime import datetime
 
 app = Flask(__name__)
 
@@ -15,13 +17,24 @@ db_config = {
 def check_port(ip, port):
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.settimeout(1)
+    start_time = time.time()
     result = sock.connect_ex((ip, port))
+    end_time = time.time()
     sock.close()
-    return result == 0
+    
+    if result == 0:
+        latency = (end_time - start_time) * 1000
+        return True, latency
+    return False, 0
 
 @app.route('/')
 def index():
-    context = {"db_status": "Desconectado", "db_data": [], "activos": []}
+    context = {
+        "db_status": "Desconectado", 
+        "db_data": [], 
+        "activos": [],
+        "timestamp": datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+    }
     try:
         connection = pymysql.connect(**db_config)
         context["db_status"] = "Conectado"
@@ -33,8 +46,13 @@ def index():
             activos_db = cursor.fetchall()
             
             for activo in activos_db:
-                is_up = check_port(activo['direccion_ip'], activo['puerto'])
-                activo['estado'] = "Activo" if is_up else "Caído"
+                is_up, latency = check_port(activo['direccion_ip'], activo['puerto'])
+                if is_up:
+                    activo['estado'] = "Activo"
+                    activo['latencia'] = f"{latency:.0f} ms"
+                else:
+                    activo['estado'] = "Caído"
+                    activo['latencia'] = "-"
                 context["activos"].append(activo)
                 
         connection.close()
