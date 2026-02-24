@@ -39,6 +39,14 @@
         state: present
         login_unix_socket: /var/run/mysqld/mysqld.sock
 
+    - name: "Crear tabla activos e insertar datos de red"
+      community.mysql.mysql_query:
+        login_unix_socket: /var/run/mysqld/mysqld.sock
+        login_user: root
+        login_db: tfg_database
+        query:
+          - "CREATE TABLE IF NOT EXISTS activos (id INT AUTO_INCREMENT PRIMARY KEY, nombre_servidor VARCHAR(255), direccion_ip VARCHAR(15), puerto INT, entorno VARCHAR(50), tecnologia VARCHAR(50));"
+          - "INSERT IGNORE INTO activos (id, nombre_servidor, direccion_ip, puerto, entorno, tecnologia) VALUES (1, 'Proxy Nginx', '192.168.1.60', 80, 'Local Proxmox', 'Nginx'), (2, 'App Flask', '192.168.1.61', 8000, 'Local Proxmox', 'Flask'), (3, 'DB MariaDB', '192.168.1.62', 3306, 'Local Proxmox', 'MariaDB'), (4, 'Nodo Cloud GCP', '100.66.16.119', 22, 'Cloud GCP', 'Tailscale/SSH');"
   handlers:
     - name: Reiniciar MariaDB
       ansible.builtin.service:

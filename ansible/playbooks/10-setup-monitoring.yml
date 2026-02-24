@@ -11,11 +11,27 @@
       args:
         creates: /usr/sbin/netdata
 
-    - name: "Asegurar que el servicio Netdata este activo"
+    - name: "Crear directorio de override para Netdata"
+      ansible.builtin.file:
+        path: /etc/systemd/system/netdata.service.d
+        state: directory
+        mode: '0755'
+
+    - name: "Aplicar configuracion de compatibilidad LXC (Evitar error 226/NAMESPACE)"
+      ansible.builtin.copy:
+        dest: /etc/systemd/system/netdata.service.d/override.conf
+        content: |
+          [Service]
+          ProtectSystem=no
+          ProtectHome=no
+          PrivateTmp=no
+
+    - name: "Asegurar que el servicio Netdata este activo y con la nueva configuracion"
       ansible.builtin.systemd:
         name: netdata
-        state: started
+        state: restarted
         enabled: yes
+        daemon_reload: yes
 
     - name: "Abrir puerto de Netdata en el Firewall (19999)"
       community.general.ufw:

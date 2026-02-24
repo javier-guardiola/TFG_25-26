@@ -5,15 +5,20 @@
     <title>Panel TFG</title>
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f4f7f6; color: #333; display: flex; flex-direction: column; align-items: center; padding-top: 50px; }
-        .card { background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); width: 80%; max-width: 600px; }
+        .card { background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); width: 90%; max-width: 900px; }
         .status-on { color: #27ae60; font-weight: bold; }
         .status-off { color: #e74c3c; font-weight: bold; }
+        .audit-time { font-size: 0.9em; color: #7f8c8d; font-style: italic; margin-bottom: 15px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+        th { background-color: #f2f2f2; }
     </style>
 </head>
 <body>
     <div class="card">
         <h1>Infraestructura TFG 25-26</h1>
         <hr>
+        <div class="audit-time" id="audit-time"></div>
         <p>Estado de la Base de Datos: 
             <span class="{{ 'status-on' if 'Conectado' in db_status else 'status-off' }}">
                 {{ db_status }}
@@ -22,6 +27,37 @@
         {% if db_data %}
         <p>Versión del motor: <code>{{ db_data.version }}</code></p>
         {% endif %}
+        
+        {% if activos %}
+        <h2>Inventario Dinámico de Red</h2>
+        <table>
+            <tr>
+                <th>ID</th>
+                <th>Servidor</th>
+                <th>Entorno</th>
+                <th>Tecnología</th>
+                <th>IP</th>
+                <th>Puerto Auditar</th>
+                <th>Latencia</th>
+                <th>Estado Red</th>
+            </tr>
+            {% for activo in activos %}
+            <tr>
+                <td>{{ activo.id }}</td>
+                <td>{{ activo.nombre_servidor }}</td>
+                <td>{{ activo.entorno }}</td>
+                <td>{{ activo.tecnologia }}</td>
+                <td>{{ activo.direccion_ip }}</td>
+                <td>{{ activo.puerto }}</td>
+                <td>{{ activo.latencia }}</td>
+                <td class="{{ 'status-on' if activo.estado == 'Activo' else 'status-off' }}">{{ activo.estado }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+        {% endif %}
     </div>
+    <script>
+        document.getElementById('audit-time').innerText = 'Última auditoría de red: ' + new Date().toLocaleString('es-ES');
+    </script>
 </body>
 </html>
