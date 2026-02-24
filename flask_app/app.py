@@ -2,7 +2,6 @@ from flask import Flask, render_template
 import pymysql
 import socket
 import time
-from datetime import datetime
 
 app = Flask(__name__)
 
@@ -32,8 +31,7 @@ def index():
     context = {
         "db_status": "Desconectado", 
         "db_data": [], 
-        "activos": [],
-        "timestamp": datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+        "activos": []
     }
     try:
         connection = pymysql.connect(**db_config)

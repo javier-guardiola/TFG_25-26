@@ -16,9 +16,9 @@
 </head>
 <body>
     <div class="card">
-        <h1>Infraestructura TFG 25-26 - CMDB</h1>
+        <h1>Infraestructura TFG 25-26</h1>
         <hr>
-        <div class="audit-time">Última auditoría de red: {{ timestamp }}</div>
+        <div class="audit-time" id="audit-time"></div>
         <p>Estado de la Base de Datos: 
             <span class="{{ 'status-on' if 'Conectado' in db_status else 'status-off' }}">
                 {{ db_status }}
@@ -56,5 +56,8 @@
         </table>
         {% endif %}
     </div>
+    <script>
+        document.getElementById('audit-time').innerText = 'Última auditoría de red: ' + new Date().toLocaleString('es-ES');
+    </script>
 </body>
 </html>
