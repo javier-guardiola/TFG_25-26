@@ -13,13 +13,15 @@ db_config = {
 
 @app.route('/')
 def index():
-    context = {"db_status": "Desconectado", "db_data": []}
+    context = {"db_status": "Desconectado", "db_data": [], "activos": []}
     try:
         connection = pymysql.connect(**db_config)
         context["db_status"] = "Conectado"
         with connection.cursor() as cursor:
             cursor.execute("SELECT VERSION() as version")
             context["db_data"] = cursor.fetchone()
+            cursor.execute("SELECT * FROM activos")
+            context["activos"] = cursor.fetchall()
         connection.close()
     except Exception as e:
         context["db_status"] = f"Error: {e}"

@@ -8,6 +8,9 @@
         .card { background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); width: 80%; max-width: 600px; }
         .status-on { color: #27ae60; font-weight: bold; }
         .status-off { color: #e74c3c; font-weight: bold; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
     </style>
 </head>
 <body>
@@ -21,6 +24,26 @@
         </p>
         {% if db_data %}
         <p>Versión del motor: <code>{{ db_data.version }}</code></p>
+        {% endif %}
+        
+        {% if activos %}
+        <h2>Inventario de Activos Red</h2>
+        <table>
+            <tr>
+                <th>ID</th>
+                <th>Servidor</th>
+                <th>IP</th>
+                <th>Estado</th>
+            </tr>
+            {% for activo in activos %}
+            <tr>
+                <td>{{ activo.id }}</td>
+                <td>{{ activo.nombre_servidor }}</td>
+                <td>{{ activo.direccion_ip }}</td>
+                <td class="status-on">{{ activo.estado }}</td>
+            </tr>
+            {% endfor %}
+        </table>
         {% endif %}
     </div>
 </body>
