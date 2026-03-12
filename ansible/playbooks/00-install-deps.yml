@@ -3,18 +3,51 @@
   hosts: localhost
   connection: local
   gather_facts: no
+  vars_files:
+    - vars.yml
 
   tasks:
-    - name: "Instalar colecciones de Ansible"
-      community.general.ansible_galaxy_install:
-        type: collection
-        requirements_file: "../collections/requirements.yml"
-      failed_when: false
+    - name: "Gestion autonoma de colecciones de Ansible"
+      block:
+        - name: "Intentar instalar colecciones"
+          ansible.builtin.command:
+            cmd: "ansible-galaxy collection install -r ../collections/requirements.yml"
+          register: galaxy_res
+          changed_when: "'is already installed' not in galaxy_res.stdout"
+      rescue:
+        - name: "Purgar cache de colecciones corrupta"
+          ansible.builtin.file:
+            path: "~/.ansible/collections"
+            state: absent
+        - name: "Reinstalar colecciones limpias"
+          ansible.builtin.command:
+            cmd: "ansible-galaxy collection install -r ../collections/requirements.yml"
 
-    - name: "Instalar librerías de Python necesarias"
-      ansible.builtin.pip:
-        name: [proxmoxer, requests, jmespath]
-        extra_args: "--user --break-system-packages"
+    - name: "Asegurar presencia de PIP y dependencias base en el sistema"
+      ansible.builtin.apt:
+        name: 
+          - python3-pip
+          - python3-full
+          - python3-venv
+          - sshpass
+        state: present
+        update_cache: yes
+      become: yes
+
+    - name: "Instalacion resiliente de librerias de Python"
+      block:
+        - name: "Instalacion de requerimientos de la API"
+          ansible.builtin.pip:
+            name: 
+              - proxmoxer
+              - requests
+              - jmespath
+              - pyopenssl
+              - cryptography
+      rescue:
+        - name: "Fallo critico: Requerir script de reparacion"
+          ansible.builtin.fail:
+            msg: "ERROR: Conflicto de dependencias en el sistema (PEP 668 o SSL). Por favor, ejecuta el script de aislamiento de entorno: bash ../scripts/fix-env.sh"
 
     - name: "Asegurar existencia de claves SSH locales"
       ansible.builtin.openssh_keypair:
@@ -28,7 +61,7 @@
       failed_when: false
       changed_when: false
 
-    - name: "Verificar si ya tenemos acceso SSH sin contraseña"
+    - name: "Verificar si ya tenemos acceso SSH sin contrasena"
       ansible.builtin.command: "ssh -o BatchMode=yes -o ConnectTimeout=5 -o StrictHostKeyChecking=no root@{{ pve_api_host }} 'exit'"
       register: ssh_check
       failed_when: false
@@ -36,17 +69,18 @@
 
     - name: "Autorizar SSH con Proxmox (Sustituye a ssh-copy-id)"
       ansible.builtin.shell:
-        cmd: sshpass -p "{{ container_password }}" ssh-copy-id -f -o StrictHostKeyChecking=no root@{{ pve_api_host }}
+        cmd: sshpass -p "{{ proxmox_password }}" ssh-copy-id -f -o StrictHostKeyChecking=no root@{{ pve_api_host }}
       when: ssh_check.rc != 0
       register: ssh_result
       changed_when: "'Number of key(s) added' in ssh_result.stdout"
 
-    - name: "Normalizar formato de archivos (dos2unix alternativo)"
+    - name: "Normalizar formato de archivos (Evita warning recursivo)"
       ansible.builtin.replace:
         path: "{{ item }}"
         regexp: '\r$'
         replace: ''
       with_fileglob:
-        - "../**/*.yml"
-        - "../**/*.ini"
-        - "../ansible.cfg"
+        - "../*.yml"
+        - "../ansible/*.yml"
+        - "../ansible/*.ini"
+      ignore_errors: true
