@@ -4,7 +4,7 @@
   connection: local
   gather_facts: no
   vars_files:
-    - vars.yml
+    - ../vars.yml
 
   tasks:
     - name: "Gestion autonoma de colecciones de Ansible"
@@ -44,6 +44,7 @@
               - jmespath
               - pyopenssl
               - cryptography
+            extra_args: --break-system-packages
       rescue:
         - name: "Fallo critico: Requerir script de reparacion"
           ansible.builtin.fail:
@@ -69,7 +70,7 @@
 
     - name: "Autorizar SSH con Proxmox (Sustituye a ssh-copy-id)"
       ansible.builtin.shell:
-        cmd: sshpass -p "{{ proxmox_password }}" ssh-copy-id -f -o StrictHostKeyChecking=no root@{{ pve_api_host }}
+        cmd: sshpass -p '{{ pve_root_password }}' ssh-copy-id -f -o StrictHostKeyChecking=no root@{{ pve_api_host }}
       when: ssh_check.rc != 0
       register: ssh_result
       changed_when: "'Number of key(s) added' in ssh_result.stdout"
